@@ -1,10 +1,13 @@
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
 from sqlalchemy import pool
+from settings.config import settings
+from sqlalchemy import create_engine
 
 from alembic import context
 from app.models.user_model import Base  # adjust "myapp.models" to the actual location of your Base
+from dotenv import load_dotenv
+load_dotenv(".env")
 
 
 # this is the Alembic Config object, which provides
@@ -40,7 +43,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = settings.database_url
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -53,28 +56,21 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
+    """Run migrations in 'online' mode."""
 
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
+    # Replace async driver with sync one for Alembic
+    sync_database_url = settings.database_url.replace("asyncpg", "psycopg2")
 
-    """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+    connectable = create_engine(
+        sync_database_url,
         poolclass=pool.NullPool,
     )
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
         )
 
         with context.begin_transaction():
             context.run_migrations()
-
-
-if context.is_offline_mode():
-    run_migrations_offline()
-else:
-    run_migrations_online()
