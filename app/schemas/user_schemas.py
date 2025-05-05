@@ -37,6 +37,21 @@ class UserCreate(UserBase):
     email: EmailStr = Field(..., example="john.doe@example.com")
     password: str = Field(..., example="Secure*1234")
 
+    @validator("password")
+    def validate_password_strength(cls, v):
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must include at least one uppercase letter")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Password must include at least one lowercase letter")
+        if not re.search(r"\d", v):
+            raise ValueError("Password must include at least one number")
+        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", v):
+            raise ValueError("Password must include at least one special character")
+        return v
+
+
 class UserUpdate(UserBase):
     email: Optional[EmailStr] = Field(None, example="john.doe@example.com")
     nickname: Optional[str] = Field(None, min_length=3, pattern=r'^[\w-]+$', example="john_doe123")
@@ -46,7 +61,7 @@ class UserUpdate(UserBase):
     profile_picture_url: Optional[str] = Field(None, example="https://example.com/profiles/john.jpg")
     linkedin_profile_url: Optional[str] =Field(None, example="https://linkedin.com/in/johndoe")
     github_profile_url: Optional[str] = Field(None, example="https://github.com/johndoe")
-    role: Optional[str] = Field(None, example="AUTHENTICATED")
+    role: Optional[UserRole] = Field(None, example="AUTHENTICATED")
 
     @root_validator(pre=True)
     def check_at_least_one_value(cls, values):
@@ -61,6 +76,12 @@ class UserResponse(UserBase):
     is_professional: Optional[bool] = Field(default=False, example=True)
     role: UserRole
 
+    created_at: datetime = Field(..., example=str(datetime.utcnow()))
+    updated_at: datetime = Field(..., example=str(datetime.utcnow()))
+    last_login_at: Optional[datetime] = Field(None, example=str(datetime.utcnow()))
+    links: Optional[dict] = Field(None, example={"self": "/users/1234", "edit": "/users/1234/edit"})
+
+
 class LoginRequest(BaseModel):
     email: str = Field(..., example="john.doe@example.com")
     password: str = Field(..., example="Secure*1234")
@@ -70,14 +91,25 @@ class ErrorResponse(BaseModel):
     details: Optional[str] = Field(None, example="The requested resource was not found.")
 
 class UserListResponse(BaseModel):
-    items: List[UserResponse] = Field(..., example=[{
-        "id": uuid.uuid4(), "nickname": generate_nickname(), "email": "john.doe@example.com",
-        "first_name": "John", "bio": "Experienced developer", "role": "AUTHENTICATED",
-        "last_name": "Doe", "bio": "Experienced developer", "role": "AUTHENTICATED",
-        "profile_picture_url": "https://example.com/profiles/john.jpg", 
-        "linkedin_profile_url": "https://linkedin.com/in/johndoe", 
-        "github_profile_url": "https://github.com/johndoe"
-    }])
+    items: List[UserResponse] = Field(
+        ...,
+        example=[
+            {
+                "id": "123e4567-e89b-12d3-a456-426614174000",  # Just a static UUID string
+                "nickname": "cooldev123",
+                "email": "john.doe@example.com",
+                "first_name": "John",
+                "last_name": "Doe",
+                "bio": "Experienced developer",
+                "role": "AUTHENTICATED",
+                "profile_picture_url": "https://example.com/profiles/john.jpg",
+                "linkedin_profile_url": "https://linkedin.com/in/johndoe",
+                "github_profile_url": "https://github.com/johndoe",
+                "is_professional": True
+            }
+        ]
+    )
+
     total: int = Field(..., example=100)
     page: int = Field(..., example=1)
     size: int = Field(..., example=10)

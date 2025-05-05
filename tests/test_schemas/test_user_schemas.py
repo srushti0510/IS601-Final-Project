@@ -34,6 +34,8 @@ def user_update_data():
         "profile_picture_url": "https://example.com/profile_pictures/john_doe_updated.jpg"
     }
 
+from datetime import datetime
+
 @pytest.fixture
 def user_response_data(user_base_data):
     return {
@@ -43,11 +45,18 @@ def user_response_data(user_base_data):
         "last_name": user_base_data["last_name"],
         "role": user_base_data["role"],
         "email": user_base_data["email"],
-        # "last_login_at": datetime.now(),
-        # "created_at": datetime.now(),
-        # "updated_at": datetime.now(),
-        "links": []
+        "created_at": datetime.now(),
+        "updated_at": datetime.now(),
+        "last_login_at": datetime.now(),
+        "links": {
+            "self": {
+                "href": "https://api.example.com/users/123",
+                "action": "GET",
+                "type": "application/json"
+            }
+        }
     }
+
 
 @pytest.fixture
 def login_request_data():
@@ -83,6 +92,21 @@ def test_login_request_valid(login_request_data):
     assert login.email == login_request_data["email"]
     assert login.password == login_request_data["password"]
 
+# Test for PasswordValidation
+def test_user_create_password_strength():
+    weak_password_data = {
+        "nickname": "john_doe_123",
+        "email": "john.doe@example.com",
+        "password": "weakpass",
+        "first_name": "John",
+        "last_name": "Doe",
+        "role": "AUTHENTICATED"
+    }
+    with pytest.raises(ValidationError):
+        UserCreate(**weak_password_data)
+
+    
+
 # Parametrized tests for nickname and email validation
 @pytest.mark.parametrize("nickname", ["test_user", "test-user", "testuser123", "123test"])
 def test_user_base_nickname_valid(nickname, user_base_data):
@@ -108,3 +132,5 @@ def test_user_base_url_invalid(url, user_base_data):
     user_base_data["profile_picture_url"] = url
     with pytest.raises(ValidationError):
         UserBase(**user_base_data)
+
+
