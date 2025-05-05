@@ -5,6 +5,9 @@ from app.dependencies import get_settings
 from app.models.user_model import User, UserRole
 from app.services.user_service import UserService
 from app.utils.nickname_gen import generate_nickname
+from uuid import uuid4
+
+
 
 pytestmark = pytest.mark.asyncio
 
@@ -161,3 +164,29 @@ async def test_unlock_user_account(db_session, locked_user):
     assert unlocked, "The account should be unlocked"
     refreshed_user = await UserService.get_by_id(db_session, locked_user.id)
     assert not refreshed_user.is_locked, "The user should no longer be locked"
+
+@pytest.mark.asyncio
+async def test_get_user_by_email_exists(db_session, verified_user):
+    result = await UserService.get_by_email(db_session, verified_user.email)
+    assert result is not None
+    assert result.email == verified_user.email
+
+
+@pytest.mark.asyncio
+async def test_update_user_profile_success(db_session, verified_user):
+    update_data = {
+        "first_name": "UpdatedFirstName",
+        "bio": "Updated bio"
+    }
+    
+    updated_user = await UserService.update(db_session, verified_user.id, update_data)
+
+    assert updated_user is not None
+    assert updated_user.first_name == "UpdatedFirstName"
+    assert updated_user.bio == "Updated bio"
+
+@pytest.mark.asyncio
+async def test_delete_user_nonexistent(db_session):
+    fake_user_id = uuid4()  # random UUID not linked to any user
+    result = await UserService.delete(db_session, fake_user_id)
+    assert result is False
