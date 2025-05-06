@@ -1,23 +1,58 @@
-from fastapi import UploadFile
 import uuid
+import io
+from fastapi import UploadFile, HTTPException
+from minio import Minio
+from PIL import Image
+from app.dependencies import get_settings
 
-def upload_profile_picture(file: UploadFile, user_id: str) -> str:
-    """
-    Uploads a profile picture to Minio and returns the file URL.
-    """
-    # Generate unique filename
-    file_extension = file.filename.split(".")[-1]
-    object_name = f"profile_pictures/{user_id}_{uuid.uuid4()}.{file_extension}"
+settings = get_settings()
 
-    # Upload to Minio
+minio_client = Minio(
+    settings.minio_endpoint.replace("http://", "").replace("https://", ""),
+    access_key=settings.minio_access_key,
+    secret_key=settings.minio_secret_key,
+    secure=settings.minio_endpoint.startswith("https")
+)
+
+def resize_image(file: UploadFile, size=(300, 300)) -> io.BytesIO:
+    image = Image.open(file.file)
+    image = image.convert("RGB")  # Ensure it's in a web-safe format
+    image.thumbnail(size)  # Resize with aspect ratio preserved
+
+    img_bytes = io.BytesIO()
+    image.save(img_bytes, format="JPEG", optimize=True)
+    img_bytes.seek(0)
+    return img_bytes
+
+async def upload_profile_picture(file: UploadFile, user_id: str) -> str:
+    #  Step 1: Content-Type validation
+    allowed_types = ["image/jpeg", "image/png"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Invalid file type. Only JPEG and PNG are allowed.")
+
+    #  Step 2: File size validation (Max 2MB)
+    file.file.seek(0, 2)  # Go to end of file
+    file_size = file.file.tell()
+    file.file.seek(0)  # Reset to start
+
+    max_size_bytes = 2 * 1024 * 1024  # 2MB
+    if file_size > max_size_bytes:
+        raise HTTPException(status_code=400, detail="File too large. Maximum allowed size is 2MB.")
+
+    #  Step 3: Resize image
+    resized_bytes_io = resize_image(file)
+    image_data = resized_bytes_io.getvalue()
+    image_size = len(image_data)
+
+    #  Step 4: Upload to MinIO
+    object_name = f"profile_pictures/{user_id}_{uuid.uuid4()}.jpg"
     minio_client.put_object(
         bucket_name=settings.minio_bucket,
         object_name=object_name,
-        data=file.file,
-        length=-1,  # This is required if using streaming
-        part_size=10 * 1024 * 1024,  # 10MB chunks
-        content_type=file.content_type,
+        data=io.BytesIO(image_data),
+        length=image_size,
+        content_type="image/jpeg",
     )
 
-    # Return public URL
+    #  Step 5: Return public URL
     return f"{settings.minio_endpoint}/{settings.minio_bucket}/{object_name}"
