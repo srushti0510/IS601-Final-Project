@@ -47,7 +47,7 @@ docker compose up --build
 docker compose exec fastapi pytest --cov=app --cov-report=term-missing
 ```
 
-### Features Implemented
+## Features Implemented
 
 -  **User registration and login** with secure password hashing using `bcrypt`
 -  **JWT-based authentication** and role-based authorization (admin, user, manager)
@@ -55,7 +55,7 @@ docker compose exec fastapi pytest --cov=app --cov-report=term-missing
 -  **Profile picture uploads** stored in MinIO using secure pre-signed URLs
 -  **Complete CRUD operations** for managing users
 -  **Pagination and HATEOAS links** for user listings with consistent schema responses
--  **90%+ test coverage** with `pytest`, `pytest-asyncio`, and `pytest-cov`
+-  **85+ test coverage** with `pytest`, `pytest-asyncio`, and `pytest-cov`
 -  **Alembic migrations** for managing schema versions cleanly
 -  **Dockerized architecture** for FastAPI + PostgreSQL + MinIO
 -  **CI/CD vulnerability scanning** using Trivy in GitHub Actions pipeline
@@ -77,7 +77,7 @@ This feature allows users to upload and store their profile pictures securely, e
 
 
 ### Setup Instructions:
-1. **MinIO Setup**: ### Setup Instructions:
+
 1. **MinIO Setup**: Ensure that MinIO is properly configured and running in your environment for image storage. You can follow this guide for setup: [Setting up Object Storage with Minio with Docker](https://kodekloud.com/community/t/setting-up-object-storage-with-minio-with-docker/336624).
 2. **Database Update**: Update the user profile model and database schema to include a field for storing the profile picture URL.
 3. **API Endpoint Implementation**: Create a new API route to handle file uploads, store the files in MinIO, and update the user profile with the image URL.
@@ -85,26 +85,26 @@ This feature allows users to upload and store their profile pictures securely, e
 
 This feature improves user experience by allowing account customization through profile pictures and also ensures secure, scalable storage with MinIO.
 
-### Closed Issues (Bug Fixes)
+## Closed Issues (Bug Fixes)
 
 Here are the 5 issues I identified, fixed, tested, and merged:
 
 1. **Bug #1:** [Duplicate login route](<https://github.com/srushti0510/IS601-Final-Project/issues/1>)  
    Fixed duplicate `/login/` route to resolve Swagger confusion and unexpected behavior.
 
-2. **Bug #2:** [Duplicate fields in UserListResponse example](<https://github.com/srushti0510/IS601-Final-Project/issues/2>) 
+2. **Bug #2:** [Duplicate fields in UserListResponse example](<https://github.com/srushti0510/IS601-Final-Project/issues/2>) <br>
    Removed duplicate fields in `UserListResponse` example to ensure correct schema rendering. 
 
-3. **Bug #3:** [Role Field Type Inconsistency](<https://github.com/srushti0510/IS601-Final-Project/issues/3>) 
+3. **Bug #3:** [Role Field Type Inconsistency](<https://github.com/srushti0510/IS601-Final-Project/issues/3>) <br>
     Fixed inconsistency in `role` field type in `UserUpdate` and `UserBase` schemas.  
 
-4. **Bug #4:** [UserResponse is missing fields present in route returns](<https://github.com/srushti0510/IS601-Final-Project/issues/4>) 
+4. **Bug #4:** [UserResponse is missing fields present in route returns](<https://github.com/srushti0510/IS601-Final-Project/issues/4>) <br>
    Added missing fields (`created_at`, `updated_at`, etc.) to `UserResponse` schema.  
 
-5. **Bug #5:** [Password Validation is Missing During User Creation](<https://github.com/srushti0510/IS601-Final-Project/issues/5>) 
+5. **Bug #5:** [Password Validation is Missing During User Creation](<https://github.com/srushti0510/IS601-Final-Project/issues/5>) <br>
    Added password validation to ensure strength requirements during user creation. 
 
-### Docker Image
+## Docker Image
 
 You can find the deployed Docker image here:
 
@@ -116,7 +116,7 @@ To pull the image, run:
 docker pull srushti5/final-project
 ```
 
-### Test Coverage Report
+## Test Coverage Report
 To check test coverage, run:
 
 ```bash
@@ -125,7 +125,7 @@ docker compose exec fastapi pytest --cov=app --cov-report=term-missing
 ```
 As of the final commit, test coverage is: 89%
 
-### Reflection
+## Reflection
 
 This project provided valuable hands-on experience in building a production-level backend system using FastAPI. I was tasked with implementing several key features, such as user registration, authentication, file uploads, and secure token handling, all backed by a robust testing strategy. One of the most important lessons I learned was the significance of schema validation, test coverage, and proper API documentation.
 
