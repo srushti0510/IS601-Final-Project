@@ -109,7 +109,7 @@ Here are the 5 issues I identified, fixed, tested, and merged:
 
 You can find the deployed Docker image here:
 
-- **DockerHub**: [srushti5/final-project](https://hub.docker.com/repository/docker/srushti5/final-project/general)
+ **DockerHub**: [srushti5/final-project](https://hub.docker.com/repository/docker/srushti5/final-project/general)
 
 To pull the image, run:
 
