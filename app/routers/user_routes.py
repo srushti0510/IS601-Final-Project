@@ -15,12 +15,11 @@ of security to the operations that manipulate user data.
 from builtins import dict, int, len, str
 from datetime import timedelta
 from uuid import UUID
-from fastapi import UploadFile, File
-from app.utils.minio_client import upload_profile_picture  # Your MinIO utility
-from app.models.user_model import UserRole
-from fastapi import APIRouter, Depends, HTTPException, Response, status, Request
+from fastapi import UploadFile, File, Depends, HTTPException, Response, status, Request, APIRouter
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.utils.minio_client import upload_profile_picture  # Your MinIO utility
+from app.models.user_model import UserRole
 from app.dependencies import get_current_user, get_db, get_email_service, require_role
 from app.schemas.pagination_schema import EnhancedPagination
 from app.schemas.token_schema import TokenResponse
@@ -164,7 +163,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Async
         )
         return {"access_token": access_token, "token_type": "bearer"}
 
-    raise HTTPException(status_code=401, detail="Incorrect email or password")
+    raise HTTPException(status_code=401, detail="Incorrect email or password.")
 
 
 @router.get("/verify-email/{user_id}/{token}", status_code=status.HTTP_200_OK, name="verify_email", tags=["Login and Registration"])
@@ -174,33 +173,62 @@ async def verify_email(user_id: UUID, token: str, db: AsyncSession = Depends(get
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification token")
 
 
-@router.post("/users/{user_id}/upload-profile-picture", response_model=UserResponse, tags=["User Management Requires (Admin or Manager Roles)"])
+@router.post("/users/{user_id}/upload-profile-picture", response_model=UserResponse, tags=["User Profile"])
 async def upload_profile_picture_api(
     user_id: UUID,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    request: Request = None  # Add request parameter for link generation
 ):
-    # Authorization Check
-    if str(current_user["id"]) != str(user_id) and current_user["role"] != UserRole.ADMIN.name:
-        raise HTTPException(status_code=403, detail="Not authorized to upload profile picture for this user.")
+    # Ensure current_user exists
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
 
-    # File Type Validation
-    allowed_types = ["image/jpeg", "image/png"]
-    if file.content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="Invalid file type. Only JPEG and PNG are allowed.")
+    # Authorization Check - user can only upload their own picture unless admin
+    if (str(current_user.get("user_id")) != str(user_id) and current_user.get("role") != UserRole.ADMIN.name):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to upload profile picture for this user"
+        )
 
-    # File Size Validation (Optional: 2MB Max)
-    MAX_FILE_SIZE = 2 * 1024 * 1024  # 2MB
-    contents = await file.read()
-    if len(contents) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=400, detail="File too large. Max size is 2MB.")
-    file.file.seek(0)
-
-    # Upload to MinIO
-    profile_picture_url = await upload_profile_picture(file, str(user_id))
-
-    # Update DB
-    user = await UserService.update_user_profile_picture(db, user_id, profile_picture_url)
-
-    return user
+    try:
+        # Upload to MinIO
+        profile_picture_url = await upload_profile_picture(file, str(user_id))
+        
+        # Update DB
+        user = await UserService.update_user_profile_picture(db, user_id, profile_picture_url)
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        return UserResponse.model_construct(
+            id=user.id,
+            nickname=user.nickname,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            bio=user.bio,
+            profile_picture_url=user.profile_picture_url,
+            github_profile_url=user.github_profile_url,
+            linkedin_profile_url=user.linkedin_profile_url,
+            role=user.role,
+            email=user.email,
+            last_login_at=user.last_login_at,
+            created_at=user.created_at,
+            updated_at=user.updated_at,
+            links=create_user_links(user.id, request)
+        )
+    except HTTPException:
+        # Re-raise HTTPExceptions (like for file size/type)
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload profile picture: {str(e)}"
+        )

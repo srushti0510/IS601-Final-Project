@@ -240,3 +240,12 @@ def email_service():
         mock_service.send_markdown_email.return_value = None 
         mock_service.send_markdown_email.side_effect = Exception("Invalid recipient")
         return mock_service
+
+
+@pytest.fixture(scope="function")
+async def client_with_token(async_client, user, user_token):
+    """
+    Combines an authenticated client with a test user ID.
+    Used for endpoints that require auth headers.
+    """
+    return user_token, user.id

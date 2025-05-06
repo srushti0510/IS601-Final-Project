@@ -4,6 +4,8 @@ from fastapi import UploadFile, HTTPException
 from minio import Minio
 from PIL import Image
 from app.dependencies import get_settings
+from fastapi import status
+
 
 settings = get_settings()
 
@@ -16,8 +18,8 @@ minio_client = Minio(
 
 def resize_image(file: UploadFile, size=(300, 300)) -> io.BytesIO:
     image = Image.open(file.file)
-    image = image.convert("RGB")  # Ensure it's in a web-safe format
-    image.thumbnail(size)  # Resize with aspect ratio preserved
+    image = image.convert("RGB")
+    image.thumbnail(size)
 
     img_bytes = io.BytesIO()
     image.save(img_bytes, format="JPEG", optimize=True)
@@ -25,34 +27,47 @@ def resize_image(file: UploadFile, size=(300, 300)) -> io.BytesIO:
     return img_bytes
 
 async def upload_profile_picture(file: UploadFile, user_id: str) -> str:
-    #  Step 1: Content-Type validation
-    allowed_types = ["image/jpeg", "image/png"]
-    if file.content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="Invalid file type. Only JPEG and PNG are allowed.")
+    try:
+        allowed_types = ["image/jpeg", "image/png"]
+        if not file.content_type or file.content_type not in allowed_types:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid file type. Only JPEG and PNG are allowed."
+            )
 
-    #  Step 2: File size validation (Max 2MB)
-    file.file.seek(0, 2)  # Go to end of file
-    file_size = file.file.tell()
-    file.file.seek(0)  # Reset to start
+        # Check file size
+        file.file.seek(0, 2)  # Seek to end
+        file_size = file.file.tell()
+        file.file.seek(0)  # Reset pointer
+        
+        max_size_bytes = 2 * 1024 * 1024  # 2MB
+        if file_size > max_size_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File too large. Maximum allowed size is 2MB."
+            )
 
-    max_size_bytes = 2 * 1024 * 1024  # 2MB
-    if file_size > max_size_bytes:
-        raise HTTPException(status_code=400, detail="File too large. Maximum allowed size is 2MB.")
+        # Process image
+        resized_bytes_io = resize_image(file)
+        image_data = resized_bytes_io.getvalue()
+        image_size = len(image_data)
 
-    #  Step 3: Resize image
-    resized_bytes_io = resize_image(file)
-    image_data = resized_bytes_io.getvalue()
-    image_size = len(image_data)
+        # Upload to MinIO
+        object_name = f"profile_pictures/{user_id}_{uuid.uuid4()}.jpg"
+        minio_client.put_object(
+            bucket_name=settings.minio_bucket,
+            object_name=object_name,
+            data=io.BytesIO(image_data),
+            length=image_size,
+            content_type="image/jpeg",
+        )
 
-    #  Step 4: Upload to MinIO
-    object_name = f"profile_pictures/{user_id}_{uuid.uuid4()}.jpg"
-    minio_client.put_object(
-        bucket_name=settings.minio_bucket,
-        object_name=object_name,
-        data=io.BytesIO(image_data),
-        length=image_size,
-        content_type="image/jpeg",
-    )
-
-    #  Step 5: Return public URL
-    return f"{settings.minio_endpoint}/{settings.minio_bucket}/{object_name}"
+        return f"{settings.minio_endpoint}/{settings.minio_bucket}/{object_name}"
+    
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload file: {str(e)}"
+        )

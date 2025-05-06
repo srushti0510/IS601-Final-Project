@@ -199,3 +199,18 @@ class UserService:
             await session.commit()
             return True
         return False
+    
+    @classmethod
+    async def update_user_profile_picture(cls, session: AsyncSession, user_id: UUID, profile_picture_url: str) -> Optional[User]:
+        """
+        Update a user's profile picture URL and return the updated user object.
+        """
+        user = await cls.get_by_id(session, user_id)
+        if not user:
+            return None
+            
+        user.profile_picture_url = profile_picture_url
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+        return user
