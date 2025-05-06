@@ -2,13 +2,14 @@
 
 ## Table of Contents
 
-- [Setup Instructions](#-setup-instructions)
-- [Features Implemented](#-features-implemented)
-- [Closed Issues (Bug Fixes)](#-closed-issues-bug-fixes)
-- [Docker Image](#-docker-image)
-- [Test Coverage Report](#-test-coverage-report)
-- [CI/CD Highlights](#-cicd-highlights)
-- [Reflection](#-reflection)
+- [Setup Instructions](#setup-instructions)
+- [Features Implemented](#features-implemented)
+- [New Feature](#new-feature)
+- [Closed Issues (Bug Fixes)](#closed-issues-bug-fixes)
+- [Docker Image](#docker-image)
+- [Test Coverage Report](#test-coverage-report)
+- [Reflection](#reflection)
+
 
 ## Setup Instructions
 
