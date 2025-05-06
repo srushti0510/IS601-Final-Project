@@ -74,14 +74,12 @@ jobs:
           platforms: linux/amd64,linux/arm64
           cache-from: type=registry,ref=srushti5/final-project:cache
           cache-to: type=inline,mode=max
-          
-      - name: Install Trivy for scanning
-        uses: aquasecurity/setup-trivy@v0.11.2
 
       - name: Scan Docker image for vulnerabilities
-        run: |
-          trivy image --exit-code 1 \
-            --severity CRITICAL,HIGH \
-            --ignore-unfixed \
-            --format table \
-            srushti5/final-project:${{ github.sha }}
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'srushti5/final-project:${{ github.sha }}'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
