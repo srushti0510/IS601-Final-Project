@@ -6,6 +6,7 @@ from app.models.user_model import User, UserRole
 from app.utils.nickname_gen import generate_nickname
 from app.utils.security import hash_password
 from app.services.jwt_service import decode_token  # Import your FastAPI app
+from unittest.mock import AsyncMock, patch
 
 # Example of a test function using the async_client fixture
 @pytest.mark.asyncio
@@ -83,8 +84,9 @@ async def test_create_user_invalid_email(async_client):
 
 import pytest
 
+@patch("app.services.email_service.EmailService.send_verification_email", new_callable=AsyncMock)
 @pytest.mark.asyncio
-async def test_create_user_success(async_client, admin_token):
+async def test_create_user_success(mock_send_email, async_client, admin_token):
     response = await async_client.post(
         "/users/",
         headers={"Authorization": f"Bearer {admin_token}"},
@@ -95,8 +97,11 @@ async def test_create_user_success(async_client, admin_token):
             "role": "AUTHENTICATED"
         }
     )
+
     assert response.status_code == 201
     assert response.json()["email"] == "newuser@example.com"
+    mock_send_email.assert_called_once()
+
 
 @pytest.mark.asyncio
 async def test_create_user_weak_password_failure(admin_token, async_client):
