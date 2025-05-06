@@ -14,3 +14,10 @@ def setup_logging():
     normalized_path = os.path.normpath(logging_config_path)
     # Apply the logging configuration.
     logging.config.fileConfig(normalized_path, disable_existing_loggers=False)
+
+def format_message(status: str, message: str, code: int = 200) -> dict:
+    return {
+        "status": status,
+        "message": message,
+        "code": code
+    }

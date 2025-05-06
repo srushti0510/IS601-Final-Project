@@ -82,6 +82,74 @@ async def test_create_user_invalid_email(async_client):
     assert response.status_code == 422
 
 import pytest
+
+@pytest.mark.asyncio
+async def test_create_user_success(async_client, admin_token):
+    response = await async_client.post(
+        "/users/",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={
+            "email": "newuser@example.com",
+            "password": "StrongP@ssword1",
+            "nickname": "newbie123",
+            "role": "AUTHENTICATED"
+        }
+    )
+    assert response.status_code == 201
+    assert response.json()["email"] == "newuser@example.com"
+
+@pytest.mark.asyncio
+async def test_create_user_weak_password_failure(admin_token, async_client):
+    response = await async_client.post(
+        "/users/",
+        json={
+            "email": "weakpass@example.com",
+            "password": "123",
+            "nickname": "weakling",
+            "role": "AUTHENTICATED"
+        },
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    assert response.status_code == 422  # Unprocessable Entity
+
+@pytest.mark.asyncio
+async def test_create_user_missing_field(admin_token, async_client):
+    response = await async_client.post(
+        "/users/",
+        json={
+            # "email" is intentionally missing
+            "password": "StrongP@ssword1",
+            "nickname": "missingemail",
+            "role": "AUTHENTICATED"
+        },
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    assert response.status_code == 422  # Validation error
+
+@pytest.mark.asyncio
+async def test_create_user_invalid_email_format(admin_token, async_client):
+    response = await async_client.post(
+        "/users/",
+        json={
+            "email": "not-an-email",
+            "password": "StrongP@ssword1",
+            "nickname": "invalidemail",
+            "role": "AUTHENTICATED"
+        },
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    assert response.status_code == 422  # Unprocessable Entity
+
+@pytest.mark.asyncio
+async def test_get_user_by_id_success(admin_token, async_client, user):
+    response = await async_client.get(
+        f"/users/{user.id}",
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    assert response.status_code == 200
+    assert response.json()["email"] == user.email
+
+import pytest
 from app.services.jwt_service import decode_token
 from urllib.parse import urlencode
 

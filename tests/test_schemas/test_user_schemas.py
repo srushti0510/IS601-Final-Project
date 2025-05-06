@@ -105,7 +105,36 @@ def test_user_create_password_strength():
     with pytest.raises(ValidationError):
         UserCreate(**weak_password_data)
 
-    
+def test_user_create_weak_password():
+    from pydantic import ValidationError
+    from app.schemas.user_schemas import UserCreate
+
+    weak_passwords = ["123456", "password", "abc"]
+    for pwd in weak_passwords:
+        try:
+            UserCreate(
+                email="weak@example.com",
+                password=pwd,
+                nickname="weakuser",
+                role="AUTHENTICATED"
+            )
+            assert False, f"Password '{pwd}' should have failed validation"
+        except ValidationError:
+            pass  # Expected
+
+def test_user_create_strong_password():
+    from app.schemas.user_schemas import UserCreate
+
+    user = UserCreate(
+        email="strong@example.com",
+        password="StrongPass123!",
+        nickname="stronguser",
+        role="AUTHENTICATED"
+    )
+
+    assert user.password == "StrongPass123!"
+    assert user.nickname == "stronguser"
+
 
 # Parametrized tests for nickname and email validation
 @pytest.mark.parametrize("nickname", ["test_user", "test-user", "testuser123", "123test"])

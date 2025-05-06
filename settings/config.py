@@ -21,7 +21,13 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 15  # 15 minutes for access token
     refresh_token_expire_minutes: int = 1440  # 24 hours for refresh token
     # Database configuration
-    database_url: str = Field(default='postgresql+asyncpg://user:password@postgres/myappdb', description="URL for connecting to the database")
+    database_url: str = Field(
+    default="postgresql+asyncpg://postgres:srushti05@localhost:5432/myappdb",
+    description="PostgreSQL database connection URL"
+)
+
+
+
 
     # Optional: If preferring to construct the SQLAlchemy database URL from components
     postgres_user: str = Field(default='user', description="PostgreSQL username")
@@ -39,7 +45,12 @@ class Settings(BaseSettings):
     smtp_server: str = Field(default='smtp.mailtrap.io', description="SMTP server for sending emails")
     smtp_port: int = Field(default=2525, description="SMTP port for sending emails")
     smtp_username: str = Field(default='your-mailtrap-username', description="Username for SMTP server")
-    smtp_password: str = Field(default='your-mailtrap-password', description="Password for SMTP server")
+    smtp_password: str = Field(default='your-mailtrap-password', description="Password for SMTP server") 
+    # Minio configuration
+    minio_endpoint: str = Field(default="http://localhost:9000", description="Minio endpoint URL")
+    minio_access_key: str = Field(default="minioadmin", description="Minio access key")
+    minio_secret_key: str = Field(default="minioadmin", description="Minio secret key")
+    minio_bucket: str = Field(default="profile-pictures", description="Minio bucket name")
 
 
     class Config:

@@ -80,6 +80,28 @@ class UserResponse(UserBase):
     updated_at: datetime = Field(..., example=str(datetime.utcnow()))
     last_login_at: Optional[datetime] = Field(None, example=str(datetime.utcnow()))
     links: Optional[dict] = Field(None, example={"self": "/users/1234", "edit": "/users/1234/edit"})
+    profile_picture_url: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+        schema_extra = {
+            "example": {
+                "id": "9dc3ba46-395a-437b-946c-4c5d49ef5aa2",
+                "email": "john.doe@example.com",
+                "nickname": "jolly_lion_403",
+                "is_professional": True,
+                "role": "authenticated",
+                "created_at": "2025-05-05T12:00:00Z",
+                "updated_at": "2025-05-05T12:05:00Z",
+                "last_login_at": "2025-05-05T12:03:00Z",
+                "links": {
+                    "self": "/users/9dc3ba46-395a-437b-946c-4c5d49ef5aa2",
+                    "edit": "/users/9dc3ba46-395a-437b-946c-4c5d49ef5aa2/edit"
+                },
+                "profile_picture_url": "https://cdn.minio.myapp.com/profile-pictures/john_doe.jpg"
+            }
+        }
+
 
 
 class LoginRequest(BaseModel):
