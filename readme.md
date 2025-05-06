@@ -56,6 +56,7 @@ docker compose exec fastapi pytest --cov=app --cov-report=term-missing
 -  **Profile picture uploads** stored in MinIO using secure pre-signed URLs
 -  **Complete CRUD operations** for managing users
 -  **Pagination and HATEOAS links** for user listings with consistent schema responses
+-  **Added 10 new test cases** covering critical logic and edge scenarios  **
 -  **85+ test coverage** with `pytest`, `pytest-asyncio`, and `pytest-cov`
 -  **Alembic migrations** for managing schema versions cleanly
 -  **Dockerized architecture** for FastAPI + PostgreSQL + MinIO
