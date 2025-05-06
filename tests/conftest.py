@@ -25,6 +25,7 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy import text
 from faker import Faker
 
 # Application-specific imports
@@ -45,16 +46,12 @@ engine = create_async_engine(TEST_DATABASE_URL, echo=settings.debug)
 AsyncTestingSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 AsyncSessionScoped = scoped_session(AsyncTestingSessionLocal)
 
-
 @pytest.fixture
 def email_service():
-    # Assuming the TemplateManager does not need any arguments for initialization
     template_manager = TemplateManager()
     email_service = EmailService(template_manager=template_manager)
     return email_service
 
-
-# this is what creates the http client for your api tests
 @pytest.fixture(scope="function")
 async def async_client(db_session):
     async with AsyncClient(app=app, base_url="http://testserver") as client:
@@ -71,15 +68,13 @@ def initialize_database():
     except Exception as e:
         pytest.fail(f"Failed to initialize the database: {str(e)}")
 
-# this function setup and tears down (drops tales) for each test function, so you have a clean database for each test.
 @pytest.fixture(scope="function", autouse=True)
 async def setup_database():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
     async with engine.begin() as conn:
-        # you can comment out this line during development if you are debugging a single test
-         await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.drop_all)
     await engine.dispose()
 
 @pytest.fixture(scope="function")
@@ -162,14 +157,18 @@ async def unverified_user(db_session):
 
 @pytest.fixture(scope="function")
 async def users_with_same_role_50_users(db_session):
+    await db_session.execute(text("TRUNCATE TABLE users RESTART IDENTITY CASCADE"))
+    await db_session.commit()
+    fake.unique.clear()
+
     users = []
     for _ in range(50):
         user_data = {
-            "nickname": fake.user_name(),
+            "nickname": fake.unique.user_name(),
             "first_name": fake.first_name(),
             "last_name": fake.last_name(),
-            "email": fake.email(),
-            "hashed_password": fake.password(),
+            "email": fake.unique.email(),
+            "hashed_password": hash_password("StrongP@ssword1!"),
             "role": UserRole.AUTHENTICATED,
             "email_verified": False,
             "is_locked": False,
@@ -177,6 +176,7 @@ async def users_with_same_role_50_users(db_session):
         user = User(**user_data)
         db_session.add(user)
         users.append(user)
+
     await db_session.commit()
     return users
 
@@ -210,10 +210,8 @@ async def manager_user(db_session: AsyncSession):
     await db_session.commit()
     return user
 
-# Configure a fixture for each type of user role you want to test
 @pytest.fixture(scope="function")
 def admin_token(admin_user):
-    # Assuming admin_user has an 'id' and 'role' attribute
     token_data = {"sub": str(admin_user.id), "role": admin_user.role.name}
     return create_access_token(data=token_data, expires_delta=timedelta(minutes=30))
 
@@ -227,8 +225,6 @@ def user_token(user):
     token_data = {"sub": str(user.id), "role": user.role.name}
     return create_access_token(data=token_data, expires_delta=timedelta(minutes=30))
 
-settings = get_settings()
-
 @pytest.fixture
 def email_service():
     if settings.send_real_mail == 'true':
@@ -237,15 +233,10 @@ def email_service():
         mock_service = AsyncMock()
         mock_service.send_verification_email.return_value = None
         mock_service.send_user_email.return_value = None
-        mock_service.send_markdown_email.return_value = None 
+        mock_service.send_markdown_email.return_value = None
         mock_service.send_markdown_email.side_effect = Exception("Invalid recipient")
         return mock_service
 
-
 @pytest.fixture(scope="function")
 async def client_with_token(async_client, user, user_token):
-    """
-    Combines an authenticated client with a test user ID.
-    Used for endpoints that require auth headers.
-    """
     return user_token, user.id
